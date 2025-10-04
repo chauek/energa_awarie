@@ -265,15 +265,10 @@ class EnergaAwarieSensor(SensorEntity):
             guid = outage.get("guid") or f"{outage['start_date']}_{outage['end_date']}"
             start_dt = outage["start_date"]
             end_dt = outage["end_date"]
-            start_date = start_dt.date()
-            end_date_exclusive = start_date + timedelta(days=1)
-            start_date_str = start_date.isoformat()
-            end_date_str = end_date_exclusive.isoformat()
 
             local_start = dt_util.as_local(start_dt)
             local_end = dt_util.as_local(end_dt)
             description = (
-                f"{local_start.strftime('%H:%M')} - {local_end.strftime('%H:%M')} : "
                 f"{outage.get('description','')}"
             )
 
@@ -294,8 +289,8 @@ class EnergaAwarieSensor(SensorEntity):
                     if (
                         ev_summary == self.name
                         and ev_description == description
-                        and ev_start_raw == start_date
-                        and ev_end_raw == end_date_exclusive
+                        and ev_start_raw == local_start
+                        and ev_end_raw == local_end
                     ):
                         duplicate_found = True
                         _LOGGER.debug(
@@ -316,8 +311,8 @@ class EnergaAwarieSensor(SensorEntity):
                 "entity_id": self._calendar_entity,
                 "summary": self.name,
                 "description": description,
-                "start_date": start_date_str,
-                "end_date": end_date_str,
+                "start_date": local_start,
+                "end_date": local_end,
             }
             try:
                 await self.hass.services.async_call(
