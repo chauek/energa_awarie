@@ -17,6 +17,7 @@ from .const import (
     DOMAIN,
     COUNTY_OPTIONS,
     CONF_AREA,
+    CONF_CALENDAR_ENTITY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 area = user_input.get(CONF_AREA, "").strip()
                 city = user_input.get(CONF_CITY, "").strip()
                 street = user_input.get(CONF_STREET, "").strip()
+                calendar_entity = user_input.get(CONF_CALENDAR_ENTITY)
 
                 if county_raw is None or not area:
                     errors["base"] = "invalid_input"
@@ -77,6 +79,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 CONF_CITY: city,
                                 CONF_STREET: street,
                             }
+                            if calendar_entity:
+                                data[CONF_CALENDAR_ENTITY] = calendar_entity
                             return self.async_create_entry(title=title, data=data)
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception during config flow")
@@ -94,6 +98,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         area_default = user_input.get(CONF_AREA, "") if user_input else ""
         city_default = user_input.get(CONF_CITY, "") if user_input else ""
         street_default = user_input.get(CONF_STREET, "") if user_input else ""
+        calendar_default = user_input.get(CONF_CALENDAR_ENTITY) if user_input else vol.UNDEFINED
 
         def _sort_key(item: tuple[int, str]) -> str:
             return unicodedata.normalize("NFKD", item[1]).casefold()
@@ -102,11 +107,27 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             str(k): v for k, v in sorted(COUNTY_OPTIONS.items(), key=_sort_key)
         }
 
-        return vol.Schema(
-            {
-                vol.Required(CONF_COUNTY, default=county_default): vol.In(sorted_counties),
-                vol.Required(CONF_AREA, default=area_default): str,
-                vol.Optional(CONF_CITY, default=city_default): str,
-                vol.Optional(CONF_STREET, default=street_default): str,
-            }
+        # Build calendar entity options (entity_id -> friendly name)
+        calendar_states = [
+            (state.entity_id, state.name or state.entity_id)
+            for state in self.hass.states.async_all()
+            if state.entity_id.startswith("calendar.")
+        ]
+        calendar_states_sorted = sorted(
+            calendar_states,
+            key=lambda item: unicodedata.normalize("NFKD", item[1]).casefold(),
         )
+        calendar_options = {eid: label for eid, label in calendar_states_sorted}
+
+        schema_dict = {
+            vol.Required(CONF_COUNTY, default=county_default): vol.In(sorted_counties),
+            vol.Required(CONF_AREA, default=area_default): str,
+            vol.Optional(CONF_CITY, default=city_default): str,
+            vol.Optional(CONF_STREET, default=street_default): str,
+        }
+        if calendar_options:
+            schema_dict[vol.Optional(CONF_CALENDAR_ENTITY, default=calendar_default)] = vol.In(calendar_options)
+        else:
+            schema_dict[vol.Optional(CONF_CALENDAR_ENTITY, default=calendar_default)] = str
+
+        return vol.Schema(schema_dict)

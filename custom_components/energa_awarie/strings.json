@@ -8,7 +8,8 @@
           "county": "Powiat",
           "area": "Gmina",
           "city": "Miasto",
-          "street": "Ulica"
+          "street": "Ulica",
+          "calendar_entity": "Kalendarz (opcjonalnie)"
         }
       }
     },

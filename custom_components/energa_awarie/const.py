@@ -7,6 +7,7 @@ CONF_COUNTY = "county"
 CONF_AREA = "area"  # Gmina
 CONF_CITY = "city"
 CONF_STREET = "street"
+CONF_CALENDAR_ENTITY = "calendar_entity"  # Optional calendar to create events
 
 # Source URL
 ENERGA_BASE_URL = "https://energa-operator.pl"

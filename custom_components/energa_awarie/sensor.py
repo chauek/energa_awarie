@@ -15,11 +15,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.util import dt as dt_util
+from homeassistant.components.calendar import DOMAIN as CALENDAR_DOMAIN
 
 from .const import (
     ATTR_ATTRIBUTION,
     ATTR_CITY,
-    ATTR_NEXT_OUTAGE,
     ATTR_OUTAGES,
     ATTR_COUNTY,
     ATTR_STREET,
@@ -29,10 +30,11 @@ from .const import (
     CONF_COUNTY,
     CONF_STREET,
     DOMAIN,
-    ENERGA_PLANNED_URL,
     COUNTY_OPTIONS,
     CONF_AREA, ATTR_DESCRIPTION, ATTR_START, ATTR_END,
+    CONF_CALENDAR_ENTITY,
 )
+from .outages import EnergaOutageFetcher, OutageFilter
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,8 +54,9 @@ async def async_setup_entry(
     area = config_entry.data.get(CONF_AREA, "")
     session = async_get_clientsession(hass)
     county_name = COUNTY_OPTIONS.get(county_id, str(county_id))
+    calendar_entity = config_entry.data.get(CONF_CALENDAR_ENTITY)
     async_add_entities(
-        [EnergaAwarieSensor(session, county_id, county_name, area, city, street)],
+        [EnergaAwarieSensor(session, county_id, county_name, area, city, street, calendar_entity)],
         True,
     )
 
@@ -71,6 +74,7 @@ class EnergaAwarieSensor(SensorEntity):
         area: str,
         city: str,
         street: str,
+        calendar_entity: str | None,
     ) -> None:
         """Initialize the sensor."""
         self._session = session
@@ -90,6 +94,15 @@ class EnergaAwarieSensor(SensorEntity):
         self._attr_native_value: int | None = None
         self._attr_extra_state_attributes: dict[str, Any] = {}
         self._outages: list[dict[str, Any]] = []
+        self._fetcher = EnergaOutageFetcher(session)
+        self._filter = OutageFilter(
+            county_id=county_id,
+            area=self._area,
+            city=self._city,
+            street=self._street,
+        )
+        self._calendar_entity = calendar_entity
+        self._posted_event_ids: set[str] = set()
 
     @property
     def icon(self) -> str:
@@ -114,15 +127,17 @@ class EnergaAwarieSensor(SensorEntity):
     async def async_update(self) -> None:
         """Fetch new state data for the sensor."""
         try:
-            _LOGGER.debug(
-                "Fetching planned outages for county=%s city=%s street=%s",
+            _LOGGER.warning(
+                "Energa: Fetching planned outages for county=%s area=%s city=%s street=%s",
                 self._county_id,
+                self._area,
                 self._city,
                 self._street,
             )
-
-            outages = await self._fetch_planned_outages()
+            outages = await self._fetcher.fetch_outages(self._filter)
             self._outages = outages
+            if self._calendar_entity:
+                await self._sync_calendar_events(outages)
 
             if outages:
                 next_outage = self._find_next_outage(outages)
@@ -178,173 +193,6 @@ class EnergaAwarieSensor(SensorEntity):
             _LOGGER.error("Error fetching planned outages: %s", err)
             self._attr_native_value = None
 
-    async def _fetch_planned_outages(self) -> list[dict[str, Any]]:
-        """Fetch planned outages from Energa website."""
-        outages: list[dict[str, Any]] = []
-
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-            ),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "pl,en;q=0.9",
-        }
-
-        try:
-            # First, fetch the HTML page to extract the JSON API endpoint
-            async with self._session.get(
-                ENERGA_PLANNED_URL,
-                headers=headers,
-                timeout=aiohttp.ClientTimeout(total=30),
-            ) as response:
-                if response.status != 200:
-                    _LOGGER.error(
-                        "Error fetching data from Energa: HTTP %s", response.status
-                    )
-                    return outages
-
-                html = await response.text()
-                soup = BeautifulSoup(html, "html.parser")
-
-                # Find the div with class "plannedShutdown-js" and extract data-shutdowns attribute
-                planned_shutdown_div = soup.find("div", class_="plannedShutdown-js")
-                if not planned_shutdown_div:
-                    _LOGGER.error("Could not find plannedShutdown-js div in HTML")
-                    return outages
-
-                data_shutdowns = planned_shutdown_div.get("data-shutdowns")
-                if not data_shutdowns:
-                    _LOGGER.error("Could not find data-shutdowns attribute")
-                    return outages
-
-                # Build the JSON API URL
-                from .const import ENERGA_BASE_URL
-                json_url = f"{ENERGA_BASE_URL}{data_shutdowns}"
-                _LOGGER.debug("Fetching outages data from: %s", json_url)
-
-                # Fetch the JSON data
-                async with self._session.get(
-                    json_url,
-                    headers={**headers, "Accept": "application/json"},
-                    timeout=aiohttp.ClientTimeout(total=30),
-                ) as json_response:
-                    if json_response.status != 200:
-                        _LOGGER.error(
-                            "Error fetching JSON data from Energa: HTTP %s", json_response.status
-                        )
-                        return outages
-
-                    json_data = await json_response.json()
-                    outages = self._parse_json_outages(json_data)
-
-        except aiohttp.ClientError as err:
-            _LOGGER.error("Error connecting to Energa website: %s", err)
-        except Exception as err:  # pylint: disable=broad-except
-            _LOGGER.error("Unexpected error parsing Energa data: %s", err)
-
-        return outages
-
-    def _parse_json_outages(self, json_data: dict[str, Any]) -> list[dict[str, Any]]:
-        """Parse outages from JSON data."""
-        outages: list[dict[str, Any]] = []
-
-        try:
-            # Extract shutdowns array from the JSON structure
-            shutdowns = json_data.get("document", {}).get("payload", {}).get("shutdowns", [])
-
-            for shutdown in shutdowns:
-                # Check if this outage matches our configured location
-                if self._matches_json_location(shutdown):
-                    outage = self._extract_json_outage_data(shutdown)
-                    if outage:
-                        outages.append(outage)
-
-        except Exception as err:  # pylint: disable=broad-except
-            _LOGGER.error("Error parsing outages JSON: %s", err)
-
-        _LOGGER.debug("Found %s matching outages", len(outages))
-        return outages
-
-    def _matches_json_location(self, shutdown: dict[str, Any]) -> bool:
-        """Match outage by county id, gmina (area), and optional city/street."""
-        try:
-            counties_list = shutdown.get("counties") or []
-            if self._county_id not in counties_list:
-                return False
-
-            # Area (gmina) must match (substring in any provided area string)
-            if self._area:
-                areas_list = shutdown.get("areas") or []
-                area_lower = self._area.lower()
-                if not any(area_lower in a.lower() for a in areas_list):
-                    return False
-
-            msg = shutdown.get("message", "").lower()
-            areas_joined = " ".join(shutdown.get("areas", [])).lower()
-            combined = f"{msg} {areas_joined}"
-
-            if self._city and self._city.lower() not in combined:
-                return False
-            if self._street and self._street.lower() not in combined:
-                return False
-            return True
-        except Exception as err:  # pylint: disable=broad-except
-            _LOGGER.debug("Error matching outage: %s", err)
-            return False
-
-    def _extract_json_outage_data(self, shutdown: dict[str, Any]) -> dict[str, Any] | None:
-        """Extract outage data from JSON shutdown object."""
-        try:
-            # Parse start and end dates from ISO format
-            start_date_str = shutdown.get("startDate")
-            end_date_str = shutdown.get("endDate")
-
-            if not start_date_str:
-                return None
-
-            from datetime import datetime, timezone
-            import dateutil.parser
-
-            # Parse ISO datetime strings
-            start_dt = dateutil.parser.isoparse(start_date_str)
-            end_dt = None
-            if end_date_str:
-                end_dt = dateutil.parser.isoparse(end_date_str)
-            else:
-                # Default end time to start + 4 hours if not provided
-                from datetime import timedelta
-                end_dt = start_dt + timedelta(hours=4)
-
-            # Ensure timezone-aware UTC for comparisons
-            if start_dt.tzinfo is None:
-                start_dt = start_dt.replace(tzinfo=timezone.utc)
-            if end_dt.tzinfo is None:
-                end_dt = end_dt.replace(tzinfo=timezone.utc)
-
-            # Get description and location info
-            message = shutdown.get("message", "")
-            areas = shutdown.get("areas", [])
-            dept_name = shutdown.get("deptName", "")
-            region_name = shutdown.get("regionName", "")
-
-            location = f"{dept_name}, {region_name}"
-            if shutdown.get("areas"):
-                location = f"{location}, {', '.join(shutdown.get('areas'))}"
-
-            description = f"{message} ({location})"
-
-            return {
-                "start_date": start_dt,
-                "end_date": end_dt,
-                "description": description,
-                "location": location,
-            }
-
-        except Exception as err:  # pylint: disable=broad-except
-            _LOGGER.debug("Error extracting JSON outage data: %s", err)
-            return None
-
     def _find_next_outage(
         self, outages: list[dict[str, Any]]
     ) -> dict[str, Any] | None:
@@ -356,3 +204,127 @@ class EnergaAwarieSensor(SensorEntity):
             return None
 
         return min(future_outages, key=lambda x: x["start_date"])
+
+    async def _get_calendar_events(self, start: datetime, end: datetime) -> list[dict[str, Any]]:
+        """Fetch calendar events directly from the calendar entity (not HTTP)."""
+        try:
+            comp = self.hass.data.get(CALENDAR_DOMAIN)
+            if not comp:
+                return []
+            entity = comp.get_entity(self._calendar_entity)
+            if not entity:
+                return []
+            # Entity method returns list[CalendarEvent] or list[dict]; normalize to list[dict]
+            events = await entity.async_get_events(self.hass, start, end)
+            normalized: list[dict[str, Any]] = []
+            for ev in events:
+                if isinstance(ev, dict):
+                    normalized.append(ev)
+                else:
+                    # CalendarEvent object
+                    normalized.append(
+                        {
+                            "summary": getattr(ev, "summary", ""),
+                            "description": getattr(ev, "description", ""),
+                            "start": getattr(ev, "start", {}),
+                            "end": getattr(ev, "end", {}),
+                        }
+                    )
+            return normalized
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.debug("Energa: failed to get calendar events", exc_info=True)
+            return []
+
+    def _event_date(self, endpoint: dict[str, Any]) -> datetime | None:
+        """Return datetime (local tz) from calendar event endpoint dict (start/end)."""
+        if not isinstance(endpoint, dict):
+            return None
+        # All-day events -> 'date'; timed events -> 'dateTime'
+        if "dateTime" in endpoint:
+            try:
+                dt = dateutil.parser.isoparse(endpoint["dateTime"])
+                return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+            except Exception:
+                return None
+        if "date" in endpoint:
+            try:
+                # Treat all‑day date as local midnight
+                d = dateutil.parser.isoparse(endpoint["date"]).date()
+                return dt_util.start_of_local_day(dt_util.now()).replace(
+                    year=d.year, month=d.month, day=d.day
+                )
+            except Exception:
+                return None
+        return None
+
+    async def _sync_calendar_events(self, outages: list[dict[str, Any]]) -> None:
+        """Create all-day calendar events for outages (idempotent & duplicate aware)."""
+        if not self.hass or not self._calendar_entity:
+            return
+        for outage in outages:
+            guid = outage.get("guid") or f"{outage['start_date']}_{outage['end_date']}"
+            start_dt = outage["start_date"]
+            end_dt = outage["end_date"]
+            start_date = start_dt.date()
+            end_date_exclusive = start_date + timedelta(days=1)
+            start_date_str = start_date.isoformat()
+            end_date_str = end_date_exclusive.isoformat()
+
+            local_start = dt_util.as_local(start_dt)
+            local_end = dt_util.as_local(end_dt)
+            description = (
+                f"{local_start.strftime('%H:%M')} - {local_end.strftime('%H:%M')} : "
+                f"{outage.get('description','')}"
+            )
+
+            if guid in self._posted_event_ids:
+                continue
+
+            # Duplicate detection via direct entity call
+            duplicate_found = False
+            try:
+                day_start = dt_util.start_of_local_day(local_start)
+                day_end = day_start + timedelta(days=1)
+                existing_events = await self._get_calendar_events(day_start, day_end)
+                for ev in existing_events:
+                    ev_summary = ev.get("summary", "") or ""
+                    ev_description = ev.get("description", "") or ""
+                    ev_start_raw = ev.get("start", {})
+                    ev_end_raw = ev.get("end", {})
+                    if (
+                        ev_summary == self.name
+                        and ev_description == description
+                        and ev_start_raw == start_date
+                        and ev_end_raw == end_date_exclusive
+                    ):
+                        duplicate_found = True
+                        _LOGGER.debug(
+                            "Energa: Duplicate calendar event detected (%s)", guid
+                        )
+                        break
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.warning(
+                    "Energa: calendar duplicate check failed, proceeding anyway",
+                    exc_info=True,
+                )
+
+            if duplicate_found:
+                self._posted_event_ids.add(guid)
+                continue
+
+            payload = {
+                "entity_id": self._calendar_entity,
+                "summary": self.name,
+                "description": description,
+                "start_date": start_date_str,
+                "end_date": end_date_str,
+            }
+            try:
+                await self.hass.services.async_call(
+                    "calendar", "create_event", payload, blocking=False
+                )
+                self._posted_event_ids.add(guid)
+                _LOGGER.debug("Energa: Created calendar event for outage %s", guid)
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.warning("Energa: Failed to create calendar event", exc_info=True)
+        return
