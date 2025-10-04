@@ -1,0 +1,15 @@
+{
+  "domain": "energa_awarie",
+  "name": "Energa Awarie",
+  "version": "0.1.0",
+  "config_flow": true,
+  "documentation": "https://github.com/yourusername/energa_awarie",
+  "issue_tracker": "https://github.com/yourusername/energa_awarie/issues",
+  "iot_class": "cloud_polling",
+  "integration_type": "service",
+  "codeowners": [],
+  "requirements": [
+    "beautifulsoup4>=4.12.2",
+    "aiohttp>=3.9.1"
+  ]
+}

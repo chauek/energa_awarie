@@ -1,0 +1,23 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Konfiguracja Energa Awarie",
+        "description": "Podaj dane lokalizacji aby monitorować planowane wyłączenia prądu",
+        "data": {
+          "county": "Powiat",
+          "area": "Gmina",
+          "city": "Miasto",
+          "street": "Ulica"
+        }
+      }
+    },
+    "error": {
+      "invalid_input": "Uzupełnij wszystkie wymagane pola",
+      "unknown": "Wystąpił nieoczekiwany błąd"
+    },
+    "abort": {
+      "already_configured": "Ta lokalizacja jest już skonfigurowana"
+    }
+  }
+}
