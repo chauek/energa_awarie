@@ -250,6 +250,7 @@ class EnergaAwarieSensor(SensorEntity):
             start_dt = outage["start_date"]
             end_dt = outage["end_date"]
 
+            summary = f"Energa Wyłączenie {self._area} {self._city} {self._street}".strip()
             local_start = dt_util.as_local(start_dt)
             local_end = dt_util.as_local(end_dt)
             description = (
@@ -271,7 +272,7 @@ class EnergaAwarieSensor(SensorEntity):
                     ev_start_raw = ev.get("start", {})
                     ev_end_raw = ev.get("end", {})
                     if (
-                        ev_summary == self.name
+                        ev_summary == summary
                         and ev_description == description
                         and ev_start_raw == local_start
                         and ev_end_raw == local_end
@@ -293,7 +294,7 @@ class EnergaAwarieSensor(SensorEntity):
 
             payload = {
                 "entity_id": self._calendar_entity,
-                "summary": self.name,
+                "summary": summary,
                 "description": description,
                 "start_date": local_start,
                 "end_date": local_end,
