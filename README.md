@@ -1,6 +1,6 @@
 # Energa Awarie (Home Assistant)
 
-Niestandardowa integracja Home Assistant, która monitoruje planowane wyłączenia prądu od Energa-Operator i tworzy sensor pokazujący ile dni zostało do następnego planowanego wyłączenia dla skonfigurowanej lokalizacji (oddział, region, powiat, miasto, ulica).
+Niestandardowa integracja Home Assistant, która monitoruje planowane wyłączenia prądu od Energa-Operator i tworzy sensor pokazujący ile dni zostało do następnego planowanego wyłączenia dla wybranej lokalizacji (powiat + gmina + opcjonalnie miasto / ulica).
 
 ## Instalacja
 
@@ -14,27 +14,44 @@ Niestandardowa integracja Home Assistant, która monitoruje planowane wyłączen
 2. Uruchom ponownie Home Assistant.
 
 ## Konfiguracja
-1. Przejdź do Ustawienia → Urządzenia i usługi → Dodaj integrację.
+1. Ustawienia → Urządzenia i usługi → Dodaj integrację.
 2. Wyszukaj "Energa Awarie".
-3. Wprowadź:
-   - Oddział
-   - Region
-   - Powiat
-   - Miasto
-   - Ulica
+3. W formularzu podaj:
+   - Powiat (lista identyfikatorów)
+   - Gmina (wymagane)
+   - Miasto (opcjonalnie – zawęża dopasowanie)
+   - Ulica (opcjonalnie – dalsze zawężenie po tekście)
+   - Kalendarz (opcjonalnie – wybierz istniejący `calendar.*` aby automatycznie tworzyć wydarzenia)
+
+Po zapisaniu utworzony zostanie jeden sensor. Unikalność konfiguracji bazuje na kombinacji: powiat + gmina + (opcjonalnie) miasto + ulica.
+
+### Opcjonalne wydarzenia kalendarza
+Jeśli wybierzesz encję kalendarza:
+- Dla każdego przyszłego planowanego wyłączenia integracja spróbuje dodać wydarzenie.
+- Nazwa wydarzenia = nazwa sensora.
+- Opis wydarzenia = opis awarii zwracany przez Energa.
+- Duplikaty są pomijane (proste sprawdzanie istniejących zdarzeń danego dnia).
+- Wydarzenia obejmują dokładny czas rozpoczęcia i zakończenia (lokalna strefa czasowa).
+
+Aby wyłączyć tworzenie wydarzeń: edytuj wpis integracji i usuń wskazany kalendarz (lub skonfiguruj nowy wpis bez kalendarza).
 
 ## Sensor
-- Stan sensora: liczba dni (liczba całkowita) do następnego planowanego wyłączenia (zaokrąglone w górę).
+- Stan: liczba dni (zaokrąglone w górę) do najbliższego przyszłego planowanego wyłączenia.
 - Atrybuty:
-  - Szczegóły następnego wyłączenia: data_rozpoczęcia, data_zakończenia, opis, lokalizacja
-  - planned_outages: liczba znalezionych wyłączeń na stronie
-  - oddział, region, powiat, miasto, ulica
-  - źródło danych
+  - start: ISO start najbliższego wyłączenia
+  - end: ISO koniec najbliższego wyłączenia
+  - description: opis + lokalizacja (źródłowy tekst Energa)
+  - awarie: liczba dopasowanych wyłączeń
+  - county, area (gmina), city, street: użyte filtry
+  - attribution: źródło danych
+
+Gdy brak przyszłych wyłączeń – stan = nieustawiony (None), atrybuty start/end puste.
 
 ## Uwagi
-- Ta integracja pobiera dane ze strony: https://energa-operator.pl/uslugi/awarie-i-wylaczenia/wylaczenia-planowane
-- Struktura strony może się zmienić. W przypadku problemów z parsowaniem, dostosuj logikę parsowania w `sensor.py` (`_parse_outages` / `_extract_outage_data`).
-- Interwał odpytywania: 1 godzina.
+- Źródło danych: https://energa-operator.pl/uslugi/awarie-i-wylaczenia/wylaczenia-planowane
+- Logika pobierania i parsowania JSON znajduje się w `custom_components/energa_awarie/outages.py`.
+- Interwał odpytywania: 12 godzin.
+- Zmiana struktury strony może wymagać dostosowania metod: `_download_json`, `_parse_json_outages` lub `_extract` w pliku `outages.py`.
 
 ## Licencja
 MIT

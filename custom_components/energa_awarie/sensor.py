@@ -39,7 +39,7 @@ from .outages import EnergaOutageFetcher, OutageFilter
 _LOGGER = logging.getLogger(__name__)
 
 # Polling interval for this platform
-SCAN_INTERVAL = timedelta(hours=1)
+SCAN_INTERVAL = timedelta(hours=12)
 
 
 async def async_setup_entry(
