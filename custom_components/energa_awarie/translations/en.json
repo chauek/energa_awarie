@@ -1,25 +1,26 @@
 {
-  "title": "Energa Awarie",
+  "title": "Energa Outages",
   "config": {
     "step": {
       "user": {
-        "title": "Konfiguracja Energa Awarie",
-        "description": "Podaj dane lokalizacji aby monitorować planowane wyłączenia prądu",
+        "title": "Energa Outages Configuration",
+        "description": "Provide location data to monitor planned power outages",
         "data": {
-          "county": "Powiat",
-          "area": "Gmina",
-          "city": "Miasto",
-          "street": "Ulica",
-          "calendar_entity": "Kalendarz (opcjonalnie)"
+          "county": "County",
+          "area": "Commune (Gmina)",
+            "city": "City",
+          "street": "Street",
+          "calendar_entity": "Calendar (optional)"
         }
       }
     },
     "error": {
-      "invalid_input": "Uzupełnij wszystkie wymagane pola",
-      "unknown": "Wystąpił nieoczekiwany błąd"
+      "invalid_input": "Fill in all required fields",
+      "invalid_location": "Location not recognized",
+      "unknown": "An unexpected error occurred"
     },
     "abort": {
-      "already_configured": "Ta lokalizacja jest już skonfigurowana"
+      "already_configured": "This location is already configured"
     }
   }
 }
