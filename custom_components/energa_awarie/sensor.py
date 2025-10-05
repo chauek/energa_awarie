@@ -21,7 +21,6 @@ from homeassistant.components.calendar import DOMAIN as CALENDAR_DOMAIN
 from .const import (
     ATTR_ATTRIBUTION,
     ATTR_CITY,
-    ATTR_OUTAGES,
     ATTR_COUNTY,
     ATTR_STREET,
     ATTR_AREA,
@@ -121,7 +120,7 @@ class EnergaAwarieSensor(SensorEntity):
             "identifiers": {(DOMAIN, identifier)},
             "name": f"Energa Awarie - {self._county_name}",
             "manufacturer": "Energa-Operator",
-            "model": "Planned Awarie",
+            "model": "Planowane Awarie",
         }
 
     async def async_update(self) -> None:
@@ -155,8 +154,7 @@ class EnergaAwarieSensor(SensorEntity):
                         ATTR_START: next_outage["start_date"].isoformat(),
                         ATTR_END: next_outage["end_date"].isoformat(),
                         ATTR_DESCRIPTION: next_outage.get("description", ""),
-                        ATTR_OUTAGES: len(outages),
-                        ATTR_COUNTY: self._county_id,
+                        ATTR_COUNTY: self._county_name,
                         ATTR_CITY: self._city,
                         ATTR_STREET: self._street,
                         ATTR_AREA: self._area,
@@ -168,8 +166,7 @@ class EnergaAwarieSensor(SensorEntity):
                         ATTR_START: None,
                         ATTR_END: None,
                         ATTR_DESCRIPTION: '',
-                        ATTR_OUTAGES: 0,
-                        ATTR_COUNTY: self._county_id,
+                        ATTR_COUNTY: self._county_name,
                         ATTR_CITY: self._city,
                         ATTR_STREET: self._street,
                         ATTR_AREA: self._area,
@@ -181,8 +178,7 @@ class EnergaAwarieSensor(SensorEntity):
                     ATTR_START: None,
                     ATTR_END: None,
                     ATTR_DESCRIPTION: '',
-                    ATTR_OUTAGES: 0,
-                    ATTR_COUNTY: self._county_id,
+                    ATTR_COUNTY: self._county_name,
                     ATTR_CITY: self._city,
                     ATTR_STREET: self._street,
                     ATTR_AREA: self._area,

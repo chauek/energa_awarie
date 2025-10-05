@@ -25,16 +25,6 @@ Niestandardowa integracja Home Assistant, która monitoruje planowane wyłączen
 
 Po zapisaniu utworzony zostanie jeden sensor. Unikalność konfiguracji bazuje na kombinacji: powiat + gmina + (opcjonalnie) miasto + ulica.
 
-### Opcjonalne wydarzenia kalendarza
-Jeśli wybierzesz encję kalendarza:
-- Dla każdego przyszłego planowanego wyłączenia integracja spróbuje dodać wydarzenie.
-- Nazwa wydarzenia = nazwa sensora.
-- Opis wydarzenia = opis awarii zwracany przez Energa.
-- Duplikaty są pomijane (proste sprawdzanie istniejących zdarzeń danego dnia).
-- Wydarzenia obejmują dokładny czas rozpoczęcia i zakończenia (lokalna strefa czasowa).
-
-Aby wyłączyć tworzenie wydarzeń: edytuj wpis integracji i usuń wskazany kalendarz (lub skonfiguruj nowy wpis bez kalendarza).
-
 ## Sensor
 - Stan: liczba dni (zaokrąglone w górę) do najbliższego przyszłego planowanego wyłączenia.
 - Atrybuty:
@@ -46,6 +36,24 @@ Aby wyłączyć tworzenie wydarzeń: edytuj wpis integracji i usuń wskazany kal
   - attribution: źródło danych
 
 Gdy brak przyszłych wyłączeń – stan = nieustawiony (None), atrybuty start/end puste.
+
+![Sensor](./docs/sensor.png)
+
+## Opcjonalne wydarzenia kalendarza
+Jeśli wybierzesz encję kalendarza:
+- Dla każdego przyszłego planowanego wyłączenia integracja spróbuje dodać wydarzenie.
+- Nazwa wydarzenia = nazwa sensora.
+- Opis wydarzenia = opis awarii zwracany przez Energa.
+- Duplikaty są pomijane (proste sprawdzanie istniejących zdarzeń danego dnia).
+- Wydarzenia obejmują dokładny czas rozpoczęcia i zakończenia (lokalna strefa czasowa).
+
+Aby wyłączyć tworzenie wydarzeń: edytuj wpis integracji i usuń wskazany kalendarz (lub skonfiguruj nowy wpis bez kalendarza).
+
+![Kalendarz](./docs/event.png)
+
+Wydarzenia kalendarza można wyświetlić za pomocą karty [custom:trash-card](https://github.com/idaho/hassio-trash-card)
+
+![thrash-card](./docs/custom-thrash-card.png)
 
 ## Uwagi
 - Źródło danych: https://energa-operator.pl/uslugi/awarie-i-wylaczenia/wylaczenia-planowane

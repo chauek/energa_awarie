@@ -17,7 +17,6 @@ ENERGA_PLANNED_URL = f"{ENERGA_BASE_URL}/uslugi/awarie-i-wylaczenia/wylaczenia-p
 ATTR_START = "start"
 ATTR_END = "end"
 ATTR_DESCRIPTION = "description"
-ATTR_OUTAGES = "awarie"
 ATTR_COUNTY = "county"
 ATTR_AREA = "area"
 ATTR_CITY = "city"
