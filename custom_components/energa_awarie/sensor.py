@@ -133,7 +133,7 @@ class EnergaAwarieSensor(SensorEntity):
                 self._city,
                 self._street,
             )
-            outages = await self._fetcher.fetch_outages(self._filter)
+            outages = await self._fetcher.fetch_planned_outages(self._filter)
             self._outages = outages
             if self._calendar_entity:
                 await self._sync_calendar_events(outages)

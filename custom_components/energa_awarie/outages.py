@@ -26,22 +26,38 @@ class OutageFilter:
 class EnergaOutageFetcher:
     """Handles retrieval and parsing of Energa planned outages."""
 
+    # Class-level (static) cache shared across instances
+    _CACHE_JSON: dict[str, Any] | None = None
+    _CACHE_EXPIRY: datetime | None = None
+    _CACHE_TTL = timedelta(minutes=10)
+
     def __init__(self, session: aiohttp.ClientSession) -> None:
         self._session = session
 
-    async def fetch_outages(self, flt: OutageFilter) -> list[dict[str, Any]]:
+    async def fetch_planned_outages(self, flt: OutageFilter) -> list[dict[str, Any]]:
         """Public method to fetch and filter outages."""
         try:
-            raw_json = await self._download_json()
+            raw_json = await self._download_planned_outages_json()
             if not raw_json:
                 return []
-            return self._parse_json_outages(raw_json, flt)
+            return self._parse_json_planned_outages(raw_json, flt)
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.error("Failed fetching outages: %s", err)
             return []
 
-    async def _download_json(self) -> dict[str, Any] | None:
-        """Download JSON payload by first scraping HTML for endpoint."""
+    async def _download_planned_outages_json(self) -> dict[str, Any] | None:
+        """Download JSON payload by first scraping HTML for endpoint (10 min shared cache)."""
+        now = datetime.now(timezone.utc)
+        if (
+            self.__class__._CACHE_JSON is not None
+            and self.__class__._CACHE_EXPIRY
+            and now < self.__class__._CACHE_EXPIRY
+        ):
+            remaining = int((self.__class__._CACHE_EXPIRY - now).total_seconds())
+            _LOGGER.debug("Energa outages cache hit (remaining %s s)", remaining)
+            return self.__class__._CACHE_JSON
+
+        _LOGGER.debug("Energa outages cache miss - fetching fresh data")
         headers = {
             "User-Agent": (
                 "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -81,14 +97,19 @@ class EnergaOutageFetcher:
                     if jres.status != 200:
                         _LOGGER.error("Error fetching Energa JSON: HTTP %s", jres.status)
                         return None
-                    return await jres.json()
+                    data = await jres.json()
+                    # Store in shared cache
+                    self.__class__._CACHE_JSON = data
+                    self.__class__._CACHE_EXPIRY = datetime.now(timezone.utc) + self._CACHE_TTL
+                    _LOGGER.debug("Energa outages JSON cached for %s minutes", int(self._CACHE_TTL.total_seconds()/60))
+                    return data
         except aiohttp.ClientError as err:
             _LOGGER.error("Network error fetching Energa data: %s", err)
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.error("Unexpected error fetching Energa data: %s", err)
         return None
 
-    def _parse_json_outages(
+    def _parse_json_planned_outages(
         self, json_data: dict[str, Any], flt: OutageFilter
     ) -> list[dict[str, Any]]:
         outages: list[dict[str, Any]] = []
