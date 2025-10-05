@@ -7,9 +7,11 @@
   "issue_tracker": "https://github.com/chauek/energa_awarie/issues",
   "iot_class": "cloud_polling",
   "integration_type": "service",
-  "codeowners": [],
+  "codeowners": ["@chauek"],
+  "homeassistant": "2024.1.0",
   "requirements": [
     "beautifulsoup4>=4.12.2",
     "aiohttp>=3.9.1"
-  ]
+  ],
+  "loggers": ["custom_components.energa_awarie"]
 }
