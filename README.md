@@ -1,6 +1,6 @@
 # Energa Awarie (Home Assistant)
 
-Niestandardowa integracja Home Assistant, która monitoruje planowane wyłączenia prądu od Energa-Operator i tworzy sensor pokazujący ile dni zostało do następnego planowanego wyłączenia dla wybranej lokalizacji (powiat + gmina + opcjonalnie miasto / ulica).
+Integracja Home Assistant, która monitoruje planowane wyłączenia prądu od Energa Operator i tworzy sensor pokazujący ile dni zostało do następnego planowanego wyłączenia dla wybranej lokalizacji (powiat + gmina + opcjonalnie miasto / ulica).
 
 ## Instalacja
 
