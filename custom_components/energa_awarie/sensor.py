@@ -138,6 +138,18 @@ class EnergaAwarieSensor(SensorEntity):
             if self._calendar_entity:
                 await self._sync_calendar_events(outages)
 
+            self._attr_native_value = None
+            self._attr_extra_state_attributes = {
+                ATTR_START: None,
+                ATTR_END: None,
+                ATTR_DESCRIPTION: '',
+                ATTR_COUNTY: self._county_name,
+                ATTR_CITY: self._city,
+                ATTR_STREET: self._street,
+                ATTR_AREA: self._area,
+                ATTR_ATTRIBUTION: ATTRIBUTION,
+            }
+
             if outages:
                 next_outage = self._find_next_outage(outages)
 
@@ -160,30 +172,6 @@ class EnergaAwarieSensor(SensorEntity):
                         ATTR_AREA: self._area,
                         ATTR_ATTRIBUTION: ATTRIBUTION,
                     }
-                else:
-                    self._attr_native_value = None
-                    self._attr_extra_state_attributes = {
-                        ATTR_START: None,
-                        ATTR_END: None,
-                        ATTR_DESCRIPTION: '',
-                        ATTR_COUNTY: self._county_name,
-                        ATTR_CITY: self._city,
-                        ATTR_STREET: self._street,
-                        ATTR_AREA: self._area,
-                        ATTR_ATTRIBUTION: ATTRIBUTION,
-                    }
-            else:
-                self._attr_native_value = None
-                self._attr_extra_state_attributes = {
-                    ATTR_START: None,
-                    ATTR_END: None,
-                    ATTR_DESCRIPTION: '',
-                    ATTR_COUNTY: self._county_name,
-                    ATTR_CITY: self._city,
-                    ATTR_STREET: self._street,
-                    ATTR_AREA: self._area,
-                    ATTR_ATTRIBUTION: ATTRIBUTION,
-                }
 
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.error("Error fetching planned outages: %s", err)
