@@ -34,15 +34,16 @@ Po zapisaniu utworzony zostanie jeden sensor. Unikalność konfiguracji bazuje n
   - awarie: liczba dopasowanych wyłączeń
   - county, area (gmina), city, street: użyte filtry
   - attribution: źródło danych
+  - type: Typ wyłączenia: "Planned" (planowane), "Outage" (awaria)
 
-Gdy brak przyszłych wyłączeń – stan = nieustawiony (None), atrybuty start/end puste.
+Gdy brak przyszłych wyłączeń – stan = nieustawiony (None), atrybuty start/end/type puste.
 
 ![Sensor](./docs/sensor.png)
 
 ## Opcjonalne wydarzenia kalendarza
 Jeśli wybierzesz encję kalendarza:
 - Dla każdego przyszłego planowanego wyłączenia integracja spróbuje dodać wydarzenie.
-- Nazwa wydarzenia = nazwa sensora.
+- Nazwa wydarzenia = "Energa (Awaria|Wyłączenie) Gmina Miejscowość Ulica"
 - Opis wydarzenia = opis awarii zwracany przez Energa.
 - Duplikaty są pomijane (proste sprawdzanie istniejących zdarzeń danego dnia).
 - Wydarzenia obejmują dokładny czas rozpoczęcia i zakończenia (lokalna strefa czasowa).
