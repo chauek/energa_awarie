@@ -31,7 +31,7 @@ from .const import (
     DOMAIN,
     COUNTY_OPTIONS,
     CONF_AREA, ATTR_DESCRIPTION, ATTR_START, ATTR_END,
-    CONF_CALENDAR_ENTITY,
+    CONF_CALENDAR_ENTITY, ATTR_TYPE, SHUTDOWN_TYPE,
 )
 from .outages import EnergaOutageFetcher, OutageFilter
 
@@ -147,6 +147,7 @@ class EnergaAwarieSensor(SensorEntity):
                 ATTR_CITY: self._city,
                 ATTR_STREET: self._street,
                 ATTR_AREA: self._area,
+                ATTR_TYPE: None,
                 ATTR_ATTRIBUTION: ATTRIBUTION,
             }
 
@@ -170,6 +171,7 @@ class EnergaAwarieSensor(SensorEntity):
                         ATTR_CITY: self._city,
                         ATTR_STREET: self._street,
                         ATTR_AREA: self._area,
+                        ATTR_TYPE: SHUTDOWN_TYPE[str(next_outage.get("shutdownType", "2"))],
                         ATTR_ATTRIBUTION: ATTRIBUTION,
                     }
 
@@ -182,7 +184,7 @@ class EnergaAwarieSensor(SensorEntity):
     ) -> dict[str, Any] | None:
         """Find the next upcoming outage."""
         now = datetime.now(timezone.utc)
-        future_outages = [o for o in outages if o["start_date"] > now]
+        future_outages = [o for o in outages if o["end_date"] > now]
 
         if not future_outages:
             return None
@@ -249,8 +251,9 @@ class EnergaAwarieSensor(SensorEntity):
             guid = outage.get("guid") or f"{outage['start_date']}_{outage['end_date']}"
             start_dt = outage["start_date"]
             end_dt = outage["end_date"]
+            type = "Awaria" if str(outage.get("shutdownType")) == "1" else "Wyłączenie"
 
-            summary = f"Energa Wyłączenie {self._area} {self._city} {self._street}".strip()
+            summary = f"Energa {type} {self._area} {self._city} {self._street}".strip()
             local_start = dt_util.as_local(start_dt)
             local_end = dt_util.as_local(end_dt)
             description = (

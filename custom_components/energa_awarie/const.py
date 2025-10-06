@@ -21,9 +21,15 @@ ATTR_COUNTY = "county"
 ATTR_AREA = "area"
 ATTR_CITY = "city"
 ATTR_STREET = "street"
+ATTR_TYPE = "type"
 ATTR_ATTRIBUTION = "attribution"
 
 ATTRIBUTION = "Data provided by Energa-Operator"
+
+SHUTDOWN_TYPE = {
+    "1": "Outage",
+    "2": "Planned",
+}
 
 # County select options (ID -> display name)
 COUNTY_OPTIONS = {

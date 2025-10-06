@@ -146,6 +146,7 @@ class EnergaOutageFetcher:
                 return False
             if flt.street and flt.street.lower() not in combined:
                 return False
+
             return True
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.debug("Error matching outage: %s", err)
@@ -183,6 +184,7 @@ class EnergaOutageFetcher:
                 "end_date": end_dt,
                 "description": description,
                 "location": location,
+                "shutdownType": shutdown.get("shutdownType", "2"),
             }
         except Exception as err:  # pylint: disable=broad-except
             _LOGGER.debug("Error extracting outage: %s", err)
