@@ -1,0 +1,57 @@
+blueprint:
+  name: Energa — awaria aktywna (powiadomienie)
+  description: >
+    Gdy encja „Awaria aktywna” integracji Energa Awarie się włączy, utwórz
+    powiadomienie w HA. Opcjonalnie wyślij na telefon przez usługę notify.
+  domain: automation
+  source_url: https://github.com/Flower7C3/energa_awarie/blob/main/custom_components/energa_awarie/blueprints/automation/energa_awaria_aktywna.yaml
+  author: Flower7C3
+  homeassistant:
+    min_version: 2024.1.0
+  input:
+    awaria_entity:
+      name: Awaria aktywna
+      description: Binary sensor z integracji Energa Awarie (`*_active_outage`).
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              integration: energa_awarie
+              device_class: power
+          multiple: false
+    notify_action:
+      name: Powiadomienie mobilne (opcjonalnie)
+      description: Akcja notify, np. wywołanie usługi z telefonu w aplikacji HA.
+      default: []
+      selector:
+        action: {}
+    notification_id:
+      name: ID powiadomienia (panel)
+      default: energa_awaria_aktywna
+      selector:
+        text:
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input awaria_entity
+    to: "on"
+
+action:
+  - variables:
+      desc: "{{ state_attr(trigger.entity_id, 'description') | default('', true) }}"
+  - service: persistent_notification.create
+    data:
+      title: "Energa — wyłączenie awaryjne"
+      message: >-
+        {% if desc %}{{ desc }}{% else %}
+        Trwa awaria w skonfigurowanym obszarze (dane z mapy bieżących wyłączeń).
+        {% endif %}
+      notification_id: !input notification_id
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ notify_action | length > 0 }}"
+        sequence: !input notify_action

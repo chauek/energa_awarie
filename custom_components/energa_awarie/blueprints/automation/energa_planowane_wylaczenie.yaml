@@ -1,0 +1,59 @@
+blueprint:
+  name: Energa — planowane wyłączenie blisko
+  description: >
+    Powiadomienie, gdy sensor „Planowane wyłączenie” pokazuje liczbę dni
+    mniejszą lub równą podanemu progowi (np. 2 dni do wyłączenia).
+  domain: automation
+  source_url: https://github.com/Flower7C3/energa_awarie/blob/main/custom_components/energa_awarie/blueprints/automation/energa_planowane_wylaczenie.yaml
+  author: Flower7C3
+  homeassistant:
+    min_version: 2024.1.0
+  input:
+    planowany_sensor:
+      name: Planowane wyłączenie
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              integration: energa_awarie
+          multiple: false
+    prog_dni:
+      name: Próg (dni)
+      default: 2
+      selector:
+        number:
+          min: 0
+          max: 14
+          step: 1
+          mode: box
+    notification_id:
+      name: ID powiadomienia
+      default: energa_planowane
+      selector:
+        text:
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: numeric_state
+    entity_id: !input planowany_sensor
+    below: 99
+
+condition:
+  - condition: template
+    value_template: >-
+      {% set d = states(planowany_sensor) %}
+      {{ d not in ['unknown','unavailable','none',''] and (d | float(99)) <= (prog_dni | float) }}
+
+action:
+  - variables:
+      dni: "{{ states(planowany_sensor) }}"
+      opis: "{{ state_attr(planowany_sensor, 'description') | default('', true) }}"
+  - service: persistent_notification.create
+    data:
+      title: "Energa — zbliża się planowane wyłączenie"
+      message: >-
+        Za {{ dni }} dni (próg {{ prog_dni }}).
+        {% if opis %} {{ opis }}{% endif %}
+      notification_id: !input notification_id

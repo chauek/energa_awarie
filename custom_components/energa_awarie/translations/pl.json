@@ -2,9 +2,35 @@
   "title": "Energa Awarie",
   "config": {
     "step": {
+      "powiat": {
+        "title": "Wybierz powiat",
+        "description": "Rozwiń listę i wpisuj nazwę, aby zawęzić (to polski powiat, nie kraj).",
+        "data": {
+          "county": "Powiat"
+        },
+        "data_description": {
+          "county": "Administracyjny powiat w Polsce (np. Gdynia, kartuski)."
+        }
+      },
+      "location": {
+        "title": "Gmina i adres",
+        "description": "Powiat: {powiat}. Gminy z danych Energi ({gminy_count}), miejscowości ({miasta_count}) — lista z podpowiedziami; możesz też wpisać własną nazwę.",
+        "data": {
+          "area": "Gmina",
+          "city": "Miasto",
+          "street": "Ulica",
+          "calendar_entity": "Kalendarz (opcjonalnie)"
+        },
+        "data_description": {
+          "area": "Jak w komunikacie Energi, np. „Gdynia gmina miejska” — nie numer działki.",
+          "city": "Opcjonalne zawężenie; dla powiatów grodzich często zostaw puste.",
+          "street": "Fragment nazwy ulicy, np. Morwowa.",
+          "calendar_entity": "Tworzy wydarzenia planowanych wyłączeń w wybranym kalendarzu."
+        }
+      },
       "user": {
         "title": "Konfiguracja Energa Awarie",
-        "description": "Podaj dane lokalizacji aby monitorować planowane wyłączenia prądu",
+        "description": "Monitoruj planowane wyłączenia prądu dla wybranej lokalizacji.",
         "data": {
           "county": "Powiat",
           "area": "Gmina",
@@ -12,14 +38,62 @@
           "street": "Ulica",
           "calendar_entity": "Kalendarz (opcjonalnie)"
         }
+      },
+      "reconfigure": {
+        "title": "Zmień lokalizację",
+        "description": "Najpierw powiat (możesz wybrać inny), potem gminę i adres."
       }
     },
     "error": {
       "invalid_input": "Uzupełnij wszystkie wymagane pola",
+      "invalid_location": "Nieznany powiat",
+      "powiat_no_match": "Brak powiatu pasującego do wpisu — spróbuj innej frazy",
+      "powiat_too_many": "Za dużo wyników — wpisz dłuższą lub bardziej szczegółową nazwę",
+      "gmina_invalid": "Gmina to nazwa (np. Gdynia), nie numer",
+      "gmina_city_county": "Dla Gdynia/Gdańsk/Sopot wpisz gminę jak nazwę miasta (np. Gdynia)",
       "unknown": "Wystąpił nieoczekiwany błąd"
     },
     "abort": {
       "already_configured": "Ta lokalizacja jest już skonfigurowana"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "active_outage": {
+        "name": "Awaria aktywna",
+        "state": {
+          "off": "Bez awarii",
+          "on": "Trwa awaria"
+        }
+      },
+      "planned_outage_soon": {
+        "name": "Wyłączenie planowane",
+        "state": {
+          "off": "Brak wyłączenia",
+          "on": "Trwa wyłączenie"
+        }
+      },
+      "state_attributes": {
+        "active_count": { "name": "Liczba aktywnych awarii" }
+      }
+    },
+    "sensor": {
+      "planned_outage": {
+        "name": "Planowane wyłączenie"
+      },
+      "state_attributes": {
+        "start": { "name": "Początek" },
+        "end": { "name": "Koniec" },
+        "description": { "name": "Opis" },
+        "type": { "name": "Typ" },
+        "county": { "name": "Powiat" },
+        "area": { "name": "Gmina" },
+        "city": { "name": "Miasto" },
+        "street": { "name": "Ulica" },
+        "awarie": { "name": "Liczba wyłączeń" },
+        "outages": { "name": "Wyłączenia" },
+        "attribution": { "name": "Źródło" }
+      }
     }
   }
 }

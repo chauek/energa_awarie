@@ -1,66 +1,87 @@
 # Energa Awarie (Home Assistant)
 
-Integracja Home Assistant, która monitoruje planowane wyłączenia prądu od Energa Operator i tworzy sensor pokazujący ile dni zostało do następnego planowanego wyłączenia dla wybranej lokalizacji (powiat + gmina + opcjonalnie miasto / ulica).
+Integracja monitoruje **planowane wyłączenia** i **bieżące awarie** Energa Operator dla wybranej lokalizacji (powiat, gmina, opcjonalnie miasto i ulica).
+
+Fork rozwojowy ([Flower7C3](https://github.com/Flower7C3/energa_awarie)) na bazie [chauek/energa_awarie](https://github.com/chauek/energa_awarie). Docelowo część zmian trafi do upstream.
+
+**English summary:** [README.en.md](README.en.md) · **Blueprinty:** [docs/BLUEPRINTS.md](docs/BLUEPRINTS.md)
+
+## Funkcje (od 1.2.0)
+
+| Encja | Typ | Znaczenie |
+|-------|-----|-----------|
+| **Awaria aktywna** | `binary_sensor` (`problem`) | Trwa awaria — widoczna też w panelu HA **`/maintenance`** (jak Librus *grade_risk*) |
+| **Wyłączenie planowane** | `binary_sensor` (`problem`) | Włączone, gdy **trwa** planowe wyłączenie — też na **`/maintenance`** |
+| **Planowane wyłączenie** | `sensor` (dni) | Dni do najbliższego planu + atrybut `outages` (lista) — feed planowanych |
+
+Dodatkowo:
+
+- **Rekonfiguracja** wpisu (powiat → gmina/miasto z API Energi) — **jedno urządzenie na wpis** (`entry_id`, nie slug lokalizacji).
+- **Lista powiatów** z wyszukiwaniem; podpowiedzi gmin/miast z JSON operatora.
+- **Kalendarz** (opcjonalnie): wydarzenia z planowanych wyłączeń.
+- **Blueprinty** automatyzacji powiadomień (HACS → Integracja → Blueprinty, lub edytor automatyzacji).
 
 ## Instalacja
 
 ### HACS (zalecane)
-1. Dodaj to repozytorium do HACS jako niestandardowe repozytorium (typ: Integration).
-2. Zainstaluj "Energa Awarie".
-3. Uruchom ponownie Home Assistant.
+
+1. Dodaj repozytorium jako [niestandardowe](https://hacs.xyz/docs/faq/custom_repositories/) (typ: **Integration**):
+   - `https://github.com/Flower7C3/energa_awarie` (fork z patchami), albo
+   - `https://github.com/chauek/energa_awarie` (upstream — starszy zestaw funkcji).
+2. Zainstaluj **Energa Awarie** i zrestartuj Home Assistant.
 
 ### Ręczna
-1. Skopiuj `custom_components/energa_awarie` do katalogu `config/custom_components/` w Home Assistant.
-2. Uruchom ponownie Home Assistant.
+
+Skopiuj `custom_components/energa_awarie` do `config/custom_components/`, restart.
 
 ## Konfiguracja
-1. Ustawienia → Urządzenia i usługi → Dodaj integrację.
-2. Wyszukaj "Energa Awarie".
-3. W formularzu podaj:
-   - Powiat (lista identyfikatorów)
-   - Gmina (wymagane)
-   - Miasto (opcjonalnie – zawęża dopasowanie)
-   - Ulica (opcjonalnie – dalsze zawężenie po tekście)
-   - Kalendarz (opcjonalnie – wybierz istniejący `calendar.*` aby automatycznie tworzyć wydarzenia)
 
-Po zapisaniu utworzony zostanie jeden sensor. Unikalność konfiguracji bazuje na kombinacji: powiat + gmina + (opcjonalnie) miasto + ulica.
+**Ustawienia → Urządzenia i usługi → Dodaj integrację → Energa Awarie**
 
-## Sensor
-- Stan: liczba dni (zaokrąglone w górę) do najbliższego przyszłego planowanego wyłączenia.
-- Atrybuty:
-  - start: ISO start najbliższego wyłączenia
-  - end: ISO koniec najbliższego wyłączenia
-  - description: opis + lokalizacja (źródłowy tekst Energa)
-  - awarie: liczba dopasowanych wyłączeń
-  - county, area (gmina), city, street: użyte filtry
-  - attribution: źródło danych
-  - type: Typ wyłączenia: "Planned" (planowane), "Outage" (awaria)
+1. Wybierz **powiat** (lista).
+2. **Gmina** (wymagana), **miasto** / **ulica** (opcjonalnie).
+3. **Kalendarz** (opcjonalnie).
 
-Gdy brak przyszłych wyłączeń – stan = nieustawiony (None), atrybuty start/end/type puste.
+Jedna konfiguracja = jedno urządzenie z dwoma encjami. Unikalność: `powiat + gmina + miasto + ulica`.
 
-![Sensor](./docs/sensor.png)
+Po aktualizacji z wersji „jeden sensor” usuń starą encję z rejestru, jeśli została sierotą.
 
-## Opcjonalne wydarzenia kalendarza
-Jeśli wybierzesz encję kalendarza:
-- Dla każdego przyszłego planowanego wyłączenia integracja spróbuje dodać wydarzenie.
-- Nazwa wydarzenia = "Energa (Awaria|Wyłączenie) Gmina Miejscowość Ulica"
-- Opis wydarzenia = opis awarii zwracany przez Energa.
-- Duplikaty są pomijane (proste sprawdzanie istniejących zdarzeń danego dnia).
-- Wydarzenia obejmują dokładny czas rozpoczęcia i zakończenia (lokalna strefa czasowa).
+## Źródła danych
 
-Aby wyłączyć tworzenie wydarzeń: edytuj wpis integracji i usuń wskazany kalendarz (lub skonfiguruj nowy wpis bez kalendarza).
+| Feed | URL HTML | Zastosowanie |
+|------|----------|----------------|
+| Planowane | [wylaczenia-planowane](https://energa-operator.pl/uslugi/awarie-i-wylaczenia/wylaczenia-planowane) | Sensor planowanych |
+| Bieżące | [wylaczenia-biezace](https://energa-operator.pl/uslugi/awarie-i-wylaczenia/wylaczenia-biezace) (`nPrMap2024` / `data-shutdowns`) | Binary awarii aktywnej |
 
+Strona oddziału (np. `/wylaczenia-biezace/torun`) to ten sam JSON z filtrem `dept` w UI — integracja filtruje po lokalizacji w HA, nie po całym oddziale.
+
+## Blueprinty i alerty
+
+Gotowe szablony w:
+
+`custom_components/energa_awarie/blueprints/automation/`
+
+- **Awaria aktywna** — `persistent_notification` + opcjonalny krok notify.
+- **Planowane wyłączenie blisko** — próg dni.
+- **Koniec awarii** — usuwa powiadomienie.
+
+Import: **Ustawienia → Automatyzacje → Utwórz automatyzację → Importuj blueprint** (lub wybór z listy po instalacji integracji).
+
+Panel **Energy** (`/energy/electricity`) nie obsługuje alertów wyłączeń — tylko statystyki zużycia (np. osobna integracja licznika). Alerty: blueprinty lub własne automaty.
+
+## Wdrożenie z monorepo `t630`
+
+```bash
+rsync -a --delete --exclude __pycache__ \
+  github/energa_awarie/custom_components/energa_awarie/ \
+  opt/homeassistant/config/custom_components/energa_awarie/
+```
+
+## Zrzuty (upstream)
+
+![Sensor](./docs/sensor.png)  
 ![Kalendarz](./docs/event.png)
 
-Wydarzenia kalendarza można wyświetlić za pomocą karty [custom:trash-card](https://github.com/idaho/hassio-trash-card)
-
-![thrash-card](./docs/custom-thrash-card.png)
-
-## Uwagi
-- Źródło danych: https://energa-operator.pl/uslugi/awarie-i-wylaczenia/wylaczenia-planowane
-- Logika pobierania i parsowania JSON znajduje się w `custom_components/energa_awarie/outages.py`.
-- Interwał odpytywania: 12 godzin.
-- Zmiana struktury strony może wymagać dostosowania metod: `_download_json`, `_parse_json_outages` lub `_extract` w pliku `outages.py`.
-
 ## Licencja
-MIT
+
+MIT (jak upstream).

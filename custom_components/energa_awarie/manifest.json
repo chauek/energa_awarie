@@ -1,9 +1,9 @@
 {
   "domain": "energa_awarie",
   "name": "Energa Awarie",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "config_flow": true,
-  "documentation": "https://github.com/chauek/energa_awarie",
+  "documentation": "https://github.com/Flower7C3/energa_awarie",
   "issue_tracker": "https://github.com/chauek/energa_awarie/issues",
   "iot_class": "cloud_polling",
   "integration_type": "service",

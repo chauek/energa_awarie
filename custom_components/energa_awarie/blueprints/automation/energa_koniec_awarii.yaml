@@ -1,0 +1,31 @@
+blueprint:
+  name: Energa — koniec awarii (wyczyść powiadomienie)
+  description: Usuwa powiadomienie panelu po przejściu „Awaria aktywna” w stan off.
+  domain: automation
+  source_url: https://github.com/Flower7C3/energa_awarie/blob/main/custom_components/energa_awarie/blueprints/automation/energa_koniec_awarii.yaml
+  author: Flower7C3
+  input:
+    awaria_entity:
+      name: Awaria aktywna
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              integration: energa_awarie
+          multiple: false
+    notification_id:
+      name: ID powiadomienia do usunięcia
+      default: energa_awaria_aktywna
+      selector:
+        text:
+
+trigger:
+  - platform: state
+    entity_id: !input awaria_entity
+    from: "on"
+    to: "off"
+
+action:
+  - service: persistent_notification.dismiss
+    data:
+      notification_id: !input notification_id
