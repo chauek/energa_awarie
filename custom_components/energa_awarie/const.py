@@ -4,6 +4,7 @@ DOMAIN = "energa_awarie"
 
 # Configuration keys
 CONF_COUNTY = "county"
+CONF_POWIAT_QUERY = "powiat_query"
 CONF_AREA = "area"  # Gmina
 CONF_CITY = "city"
 CONF_STREET = "street"
@@ -12,6 +13,7 @@ CONF_CALENDAR_ENTITY = "calendar_entity"  # Optional calendar to create events
 # Source URL
 ENERGA_BASE_URL = "https://energa-operator.pl"
 ENERGA_PLANNED_URL = f"{ENERGA_BASE_URL}/uslugi/awarie-i-wylaczenia/wylaczenia-planowane"
+ENERGA_CURRENT_URL = f"{ENERGA_BASE_URL}/uslugi/awarie-i-wylaczenia/wylaczenia-biezace"
 
 # Attributes
 ATTR_START = "start"
@@ -26,10 +28,25 @@ ATTR_ATTRIBUTION = "attribution"
 
 ATTRIBUTION = "Data provided by Energa-Operator"
 
+# Nieoznaczone daty w JSON Energi traktujemy jako czas lokalny (PL), nie UTC.
+ENERGA_TZ = "Europe/Warsaw"
+
 SHUTDOWN_TYPE = {
     "1": "Outage",
     "2": "Planned",
 }
+
+SHUTDOWN_TYPE_OUTAGE = "1"
+SHUTDOWN_TYPE_PLANNED = "2"
+
+# Coordinator
+UPDATE_INTERVAL_CURRENT = 900  # 15 min — mapa bieżących
+UPDATE_INTERVAL_PLANNED = 43200  # 12 h — harmonogram planowych
+
+CONF_ENTRY_COORDINATOR = "coordinator"
+
+# Próg (dni) dla blueprintów / automaty — sensor „Planowane wyłączenie”, nie binary.
+PLANNED_ALERT_DAYS = 2
 
 # County select options (ID -> display name)
 COUNTY_OPTIONS = {
@@ -149,3 +166,28 @@ COUNTY_OPTIONS = {
 # Map county ID -> (deprecated structure) retained only if future migration needed
 # Can be safely removed later; not used now.
 COUNTY_ID_MAP = {}  # intentionally emptied; matching now uses county id only
+
+# Powiaty grodzkie (nazwa = gmina w danych Energi)
+CITY_COUNTY_IDS = frozenset(
+    {
+        462,
+        463,
+        464,
+        1462,
+        2261,
+        2262,
+        2263,
+        2264,
+        2861,
+        2862,
+        3061,
+        3062,
+        3261,
+    }
+)
+
+ATTR_OUTAGES = "outages"
+ATTR_OUTAGES_COUNT = "awarie"
+
+# 1.2.0: device + entity ids bound to config entry_id (not location slug).
+CONFIG_ENTRY_MINOR_VERSION = 9

@@ -2,25 +2,98 @@
   "title": "Energa Outages",
   "config": {
     "step": {
-      "user": {
-        "title": "Energa Outages Configuration",
-        "description": "Provide location data to monitor planned power outages",
+      "powiat": {
+        "title": "Select powiat",
+        "description": "Open the list and type to filter. This is a Polish administrative county (powiat), not a country.",
         "data": {
-          "county": "County",
-          "area": "Commune (Gmina)",
-            "city": "City",
+          "county": "Powiat (county)"
+        },
+        "data_description": {
+          "county": "Polish powiat, e.g. Gdynia (city with powiat rights) or kartuski."
+        }
+      },
+      "location": {
+        "title": "Gmina and address",
+        "description": "Powiat: {powiat}. Communes ({gminy_count}) and localities ({miasta_count}) from Energa data — pick from the list or enter your own.",
+        "data": {
+          "area": "Gmina (commune)",
+          "city": "Locality",
+          "street": "Street",
+          "calendar_entity": "Calendar (optional)"
+        },
+        "data_description": {
+          "area": "As in Energa notices, e.g. “Gdynia gmina miejska” — not a plot or house number.",
+          "city": "Optional filter; for city powiats you can leave this empty.",
+          "street": "Part of the street name, e.g. Morwowa.",
+          "calendar_entity": "Creates calendar events for planned outages."
+        }
+      },
+      "user": {
+        "title": "Energa Outages setup",
+        "description": "Monitor planned power outages for a location.",
+        "data": {
+          "county": "Powiat (county)",
+          "area": "Gmina (commune)",
+          "city": "Locality",
           "street": "Street",
           "calendar_entity": "Calendar (optional)"
         }
+      },
+      "reconfigure": {
+        "title": "Change location",
+        "description": "First select powiat (you can change it), then commune and address."
       }
     },
     "error": {
       "invalid_input": "Fill in all required fields",
-      "invalid_location": "Location not recognized",
+      "invalid_location": "Unknown powiat",
+      "powiat_no_match": "No matching powiat — try a different search",
+      "powiat_too_many": "Too many matches — narrow your search",
+      "gmina_invalid": "Commune must be a name (e.g. Gdynia), not a number",
+      "gmina_city_county": "For Gdynia/Gdańsk/Sopot use the city name as gmina (e.g. Gdynia)",
       "unknown": "An unexpected error occurred"
     },
     "abort": {
       "already_configured": "This location is already configured"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "active_outage": {
+        "name": "Active outage",
+        "state": {
+          "off": "No outage",
+          "on": "Outage in progress"
+        }
+      },
+      "planned_outage_soon": {
+        "name": "Planned shutdown",
+        "state": {
+          "off": "No shutdown",
+          "on": "Shutdown in progress"
+        }
+      },
+      "state_attributes": {
+        "active_count": { "name": "Active outage count" }
+      }
+    },
+    "sensor": {
+      "planned_outage": {
+        "name": "Planned shutdown"
+      },
+      "state_attributes": {
+        "start": { "name": "Start" },
+        "end": { "name": "End" },
+        "description": { "name": "Description" },
+        "type": { "name": "Type" },
+        "county": { "name": "Powiat" },
+        "area": { "name": "Gmina" },
+        "city": { "name": "Locality" },
+        "street": { "name": "Street" },
+        "awarie": { "name": "Outage count" },
+        "outages": { "name": "Outages" },
+        "attribution": { "name": "Attribution" }
+      }
     }
   }
 }
